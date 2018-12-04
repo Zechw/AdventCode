@@ -1,4 +1,5 @@
 import re
+from collections import defaultdict
 
 class Claim:
 	def __init__(self, raw):
@@ -15,28 +16,52 @@ class Claim:
 		print(self.raw)	
 	
 	def overlaps_with(self, other_claim):
-		occupied_space = {}
+		pass
 
 class Fabric:
 	def __init__(self):
-		self.occupied_space = set()
+		self.occupied_space = defaultdict(int)
 
 	def mark_claim(self, claim):
 		for ix in range(claim.x, claim.x + claim.w):
 			for iy in range(claim.y, claim.y + claim.h):
 				self.mark_space_occupied(ix, iy)
-		print(self.occupied_space)
 
 	def mark_space_occupied(self, x, y):
-		self.occupied_space.add(self.hash_loc(x,y))
+		self.occupied_space[self.hash_loc(x,y)] += 1
+
+	def is_space_occupied(self, x, y):
+		return self.hash_loc(x,y) in self.occupied_space
 	
 	def hash_loc(self, x, y):
 		return str(x) + ':' + str(y)
 
+	def print(self):
+		print(self.occupied_space)
+
+
+
+
+
+
+
+sample = ['#1 @ 1,3: 4x4',
+	'#2 @ 3,1: 4x4',
+	'#3 @ 5,5: 2x2']
+
+
 with open('3.txt') as file:
-	for line in file:
-		claim = Claim(line.strip())
-		claim.print()
-		fab = Fabric()
-		fab.mark_claim(claim)
-		exit()
+	lines = file.readlines()
+	claims = [Claim(x.strip()) for x in lines]
+	fabric = Fabric()
+	
+	for claim in claims:
+		# claim.print() 
+		fabric.mark_claim(claim)
+		# fabric.print()
+	count = 0 
+	for space, claims in fabric.occupied_space.items():
+		if claims > 1:
+			count += 1
+	print(count)
+		
