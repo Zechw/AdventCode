@@ -1,67 +1,93 @@
 import re
+import math
 from collections import defaultdict
 
-class Claim:
-	def __init__(self, raw):
-		self.raw = raw
-		r = re.search(r"#(\d*) @ (\d*),(\d*): (\d*)x(\d*)", raw)
-		# print(r.groups())
-		self.id = int(r.group(1))
-		self.x = int(r.group(2))
-		self.y = int(r.group(3))
-		self.w = int(r.group(4))
-		self.h = int(r.group(5))
-
-	def print(self):
-		print(self.raw)	
-	
-	def overlaps_with(self, other_claim):
-		pass
-
-class Fabric:
-	def __init__(self):
-		self.occupied_space = defaultdict(int)
-
-	def mark_claim(self, claim):
-		for ix in range(claim.x, claim.x + claim.w):
-			for iy in range(claim.y, claim.y + claim.h):
-				self.mark_space_occupied(ix, iy)
-
-	def mark_space_occupied(self, x, y):
-		self.occupied_space[self.hash_loc(x,y)] += 1
-
-	def is_space_occupied(self, x, y):
-		return self.hash_loc(x,y) in self.occupied_space
-	
-	def hash_loc(self, x, y):
-		return str(x) + ':' + str(y)
-
-	def print(self):
-		print(self.occupied_space)
-
-
-
-
-
-
-
-sample = ['#1 @ 1,3: 4x4',
-	'#2 @ 3,1: 4x4',
-	'#3 @ 5,5: 2x2']
-
-
-with open('3.txt') as file:
-	lines = file.readlines()
-	claims = [Claim(x.strip()) for x in lines]
-	fabric = Fabric()
-	
-	for claim in claims:
-		# claim.print() 
-		fabric.mark_claim(claim)
-		# fabric.print()
-	count = 0 
-	for space, claims in fabric.occupied_space.items():
-		if claims > 1:
-			count += 1
-	print(count)
+def str_time_to_num(hr, mn):
+	hr = int(hr)
+	mn = int(mn)
+	if hr > 12: #assume anything after noon came the day before
+		hr -= 24
+	return mn + (60 * hr)
 		
+
+def num_time_to_str(num):
+	hr = math.floor(num / 60)
+	mn = num % 60
+	return ("%02d" % hr, "%20d" % mn)
+
+with open('4.txt') as file:
+	#parse logs out of source
+	logs = []
+	for line in file:
+		r = re.search(r"\[(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})\] ([\w\s#]*)", line.strip())
+		log = { 'raw': r.group(0),
+			'year': r.group(1),
+			'mo': r.group(2),
+			'day': r.group(3),
+			'hr': r.group(4),
+			'min': r.group(5),
+			'msg': r.group(6)}
+		logs.append(log)
+	logs.sort(key=lambda x: int(x['year']+x['mo']+x['day']+x['hr']+x['min'])) #combining the strings and casting to int
+	
+	# interpret logs into guard activity
+	guards = {}
+	current_guard = None
+	fall_asleep_time = None
+	for log in logs:
+		if 'Guard' in log['msg']: #shift change
+			r = re.search(r"#(\d*)", log['msg'])
+			current_guard = r.group(1)
+		if 'falls' in log['msg']: #going to sleep
+			fall_asleep_time = str_time_to_num(log['hr'], log['min'])
+		if 'wakes' in log['msg']: #waking up, log the time
+			if current_guard not in guards:
+				guards[current_guard] = defaultdict(int)
+			wakeup_time = str_time_to_num(log['hr'], log['min'])
+			for minute in range(fall_asleep_time, wakeup_time):
+				guards[current_guard][minute] += 1
+
+
+
+
+	best_guard = (0, {})
+	max_sum = 0
+	for key in guards:
+		s = 0
+		for count in guards[key].values():
+			s += count
+		if s > max_sum:
+			best_guard = (key, guards[key])
+			max_sum = s
+		
+	best_hour = (0, 0)
+	for hour in best_guard[1]:
+		if best_guard[1][hour] > best_hour[1]:
+			best_hour = (hour, best_guard[1][hour])
+	print(best_guard)
+	print(best_hour)
+	print('-')
+	print(int(best_guard[0]) * best_hour[0])
+
+
+
+
+
+	#for key in guards:
+	#	print('-')
+	#	print(key)
+	#	print(guards[key])
+	#	print('-')
+
+
+
+	#for log in logs[:10]:
+	#	print('-')
+	#	print(log['raw'])
+	#	print(str_time_to_num(log['hr'], log['min']))
+	#	print(log['year']+log['mo']+log['day']+log['hr']+log['min'])
+	#	print(int(log['year']+log['mo']+log['day']+log['hr']+log['min']))
+	#	print('-')
+
+
+
