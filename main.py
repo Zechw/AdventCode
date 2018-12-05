@@ -1,93 +1,64 @@
-import re
-import math
-from collections import defaultdict
+import sys
+sys.setrecursionlimit(100000)
+import time
 
-def str_time_to_num(hr, mn):
-	hr = int(hr)
-	mn = int(mn)
-	if hr > 12: #assume anything after noon came the day before
-		hr -= 24
-	return mn + (60 * hr)
-		
-
-def num_time_to_str(num):
-	hr = math.floor(num / 60)
-	mn = num % 60
-	return ("%02d" % hr, "%20d" % mn)
-
-with open('4.txt') as file:
-	#parse logs out of source
-	logs = []
-	for line in file:
-		r = re.search(r"\[(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})\] ([\w\s#]*)", line.strip())
-		log = { 'raw': r.group(0),
-			'year': r.group(1),
-			'mo': r.group(2),
-			'day': r.group(3),
-			'hr': r.group(4),
-			'min': r.group(5),
-			'msg': r.group(6)}
-		logs.append(log)
-	logs.sort(key=lambda x: int(x['year']+x['mo']+x['day']+x['hr']+x['min'])) #combining the strings and casting to int
+def letters_reaction(a, b):
+	r = letter_to_ordinal(a) + letter_to_ordinal(b)
+	return r
 	
-	# interpret logs into guard activity
-	guards = {}
-	current_guard = None
-	fall_asleep_time = None
-	for log in logs:
-		if 'Guard' in log['msg']: #shift change
-			r = re.search(r"#(\d*)", log['msg'])
-			current_guard = r.group(1)
-		if 'falls' in log['msg']: #going to sleep
-			fall_asleep_time = str_time_to_num(log['hr'], log['min'])
-		if 'wakes' in log['msg']: #waking up, log the time
-			if current_guard not in guards:
-				guards[current_guard] = defaultdict(int)
-			wakeup_time = str_time_to_num(log['hr'], log['min'])
-			for minute in range(fall_asleep_time, wakeup_time):
-				guards[current_guard][minute] += 1
+
+def letter_to_ordinal(a):
+	n = ord(a.upper()) - 64 # to 1-26
+	if a == a.upper(): #upper case are negative polarity
+		n *= -1
+	return n
+
+def recursive_eliminate_matches(p):
+	for i, x in enumerate(p):
+		if i > 0 and letters_reaction(p[i-1], x) == 0:
+			del p[i]
+			del p[i-1]
+			return recursive_eliminate_matches(p)
+	return p			
+
+
+def old_dumb_eliminate_matches(p):
+	while True:
+		new_p = eliminate_first_match(p)
+		if new_p is False:
+			return p
+		p = new_p
+
+def eliminate_first_match(p):
+	for i, x in enumerate(p):
+		if i > 0 and letters_reaction(p[i-1], x) == 0:
+			del p[i]
+			del p[i-1]
+			return p
+	return False
+
+
+def eliminate_matches(p):
+	i = 0
+	try:
+		while True:	
+			if letters_reaction(p[i], p[i+1]) == 0:
+				del p[i+1]
+				del p[i]
+				if i > 0:
+					i -= 1 # check the new pair behind the match
+			else: 
+				i += 1
+	except IndexError:
+		return p	
 
 
 
-
-	best_guard = (0, {})
-	max_sum = 0
-	for key in guards:
-		s = 0
-		for count in guards[key].values():
-			s += count
-		if s > max_sum:
-			best_guard = (key, guards[key])
-			max_sum = s
-		
-	best_hour = (0, 0)
-	for hour in best_guard[1]:
-		if best_guard[1][hour] > best_hour[1]:
-			best_hour = (hour, best_guard[1][hour])
-	print(best_guard)
-	print(best_hour)
-	print('-')
-	print(int(best_guard[0]) * best_hour[0])
-
-
-
-
-
-	#for key in guards:
-	#	print('-')
-	#	print(key)
-	#	print(guards[key])
-	#	print('-')
-
-
-
-	#for log in logs[:10]:
-	#	print('-')
-	#	print(log['raw'])
-	#	print(str_time_to_num(log['hr'], log['min']))
-	#	print(log['year']+log['mo']+log['day']+log['hr']+log['min'])
-	#	print(int(log['year']+log['mo']+log['day']+log['hr']+log['min']))
-	#	print('-')
-
-
-
+start = time.time()
+with open('5.txt') as file:
+	p = file.read().strip()
+	p = [x for x in p]
+	p = eliminate_matches(p)
+	print(len(p))
+	
+	print(time.time() - start)
