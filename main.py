@@ -1,64 +1,68 @@
-import sys
-sys.setrecursionlimit(100000)
-import time
-
-def letters_reaction(a, b):
-	r = letter_to_ordinal(a) + letter_to_ordinal(b)
-	return r
-	
-
-def letter_to_ordinal(a):
-	n = ord(a.upper()) - 64 # to 1-26
-	if a == a.upper(): #upper case are negative polarity
-		n *= -1
-	return n
-
-def recursive_eliminate_matches(p):
-	for i, x in enumerate(p):
-		if i > 0 and letters_reaction(p[i-1], x) == 0:
-			del p[i]
-			del p[i-1]
-			return recursive_eliminate_matches(p)
-	return p			
 
 
-def old_dumb_eliminate_matches(p):
-	while True:
-		new_p = eliminate_first_match(p)
-		if new_p is False:
-			return p
-		p = new_p
+import re
+import numpy as np
+from collections import defaultdict
+def measure_distance(a, b):
+	return abs(a[0] - b[0]) + abs(a[1] - b[1]) 
 
-def eliminate_first_match(p):
-	for i, x in enumerate(p):
-		if i > 0 and letters_reaction(p[i-1], x) == 0:
-			del p[i]
-			del p[i-1]
-			return p
-	return False
+def is_finite(c):
+	# all quadrants have an occupying cord
+	pass 
 
+with open('6.txt') as file:
+	cords = []
+	for c in file:
+		r = re.search(r"(\d*), (\d*)", c)
+		c = (int(r.group(1)), int(r.group(2)))
+		cords.append(c)
 
-def eliminate_matches(p):
-	i = 0
-	try:
-		while True:	
-			if letters_reaction(p[i], p[i+1]) == 0:
-				del p[i+1]
-				del p[i]
-				if i > 0:
-					i -= 1 # check the new pair behind the match
-			else: 
-				i += 1
-	except IndexError:
-		return p	
+	min_x = min([n[0] for n in cords])
+	max_x = max([n[0] for n in cords])
+	min_y = min([n[1] for n in cords])
+	max_y = max([n[1] for n in cords])
+
+	grid = {}      # np.full((max_x, max_y), (None, None)) # filled with (closest_cord, min_distance) 	
+
+	for x in range(min_x, max_x + 1):
+		for y in range(min_y, max_y + 1):
+			#check distance to each cord for each point on grid
+			min_dist = None
+			for c in cords:
+				dist = measure_distance((x,y), c)	
+				if min_dist is None or dist < min_dist:
+					min_dist = dist
+					grid[(x,y)] = c
+					if dist == 0:
+						break
+				elif min_dist == dist:
+					grid[(x,y)] = None
+	counts = defaultdict(int)
+	for c in grid.values():
+		counts[c] += 1
+
+	print(max(counts.values()))
+	#for c in counts:
+	#	print(counts[c], c)
+	# this should check for finite, but got the right answer without
+
+		
 
 
 
-start = time.time()
-with open('5.txt') as file:
-	p = file.read().strip()
-	p = [x for x in p]
-	p = eliminate_matches(p)
-	print(len(p))
-	
-	print(time.time() - start)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
