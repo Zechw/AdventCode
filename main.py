@@ -1,68 +1,53 @@
-
-
 import re
-import numpy as np
-from collections import defaultdict
-def measure_distance(a, b):
-	return abs(a[0] - b[0]) + abs(a[1] - b[1]) 
 
-def is_finite(c):
-	# all quadrants have an occupying cord
-	pass 
 
-with open('6.txt') as file:
-	cords = []
-	for c in file:
-		r = re.search(r"(\d*), (\d*)", c)
-		c = (int(r.group(1)), int(r.group(2)))
-		cords.append(c)
+class Node:
+	def __init__(self, node_id):
+		self.id = node_id
+		self.parents = []
+		self.children = []
+	def add_parent(self, p_id):
+		if p_id not in self.parents:
+			self.parents.append(p_id)
+	def add_child(self, p_id):
+		if p_id not in self.children:
+			self.children.append(p_id)
 
-	min_x = min([n[0] for n in cords])
-	max_x = max([n[0] for n in cords])
-	min_y = min([n[1] for n in cords])
-	max_y = max([n[1] for n in cords])
-
-	grid = {}      # np.full((max_x, max_y), (None, None)) # filled with (closest_cord, min_distance) 	
-
-	for x in range(min_x, max_x + 1):
-		for y in range(min_y, max_y + 1):
-			#check distance to each cord for each point on grid
-			min_dist = None
-			for c in cords:
-				dist = measure_distance((x,y), c)	
-				if min_dist is None or dist < min_dist:
-					min_dist = dist
-					grid[(x,y)] = c
-					if dist == 0:
-						break
-				elif min_dist == dist:
-					grid[(x,y)] = None
-	counts = defaultdict(int)
-	for c in grid.values():
-		counts[c] += 1
-
-	print(max(counts.values()))
-	#for c in counts:
-	#	print(counts[c], c)
-	# this should check for finite, but got the right answer without
-
-		
+class Step:
+	def __init__(self, string):
+		r = re.search(r"Step (\w) must be finished before step (\w) can begin", string)
+		self.parent = r.group(1)
+		self.child = r.group(2)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+with open('7.txt') as file:
+	#apply steps
+	steps = []
+	nodes = {}
+	for s in file:
+		step = Step(s.strip())
+		if step.parent not in nodes:
+			nodes[step.parent] = Node(step.parent)
+		nodes[step.parent].add_child(step.child)
+		if step.child not in nodes:
+			nodes[step.child] = Node(step.child)
+		nodes[step.child].add_parent(step.parent)
+	
+	#process_steps
+	available_nodes = []
+	for node in nodes.values():
+		if len(node.parents) == 0:
+			available_nodes.append(node.id)
+	
+	path = []
+	while len(available_nodes) != 0:
+		available_nodes.sort()
+		node_id = available_nodes.pop(0)
+		path.append(node_id)
+		for child_id in nodes[node_id].children:
+			nodes[child_id].parents.remove(node_id)
+			if len(nodes[child_id].parents) == 0:
+				available_nodes.append(child_id)
+print(path)
 
